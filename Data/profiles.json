@@ -1,0 +1,4 @@
+{
+    "1" : {"Name": "Home", "Adapter": "Ethernet", "ip": "192.168.1.100", "subnet": "255.255.255.0", "gateway": "192.168.1.1"},
+    "2" : {"Name": "Work", "Adapter": "Wi-Fi", "ip": "192.168.0.50", "subnet": "255.255.255.0", "gateway": "192.168.0.1"}
+}
