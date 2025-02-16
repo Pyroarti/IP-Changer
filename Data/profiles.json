@@ -13,13 +13,6 @@
             "ip": "200.200.200.200",
             "subnet": "255.255.255.0",
             "gateway": "200.200.200.200"
-        },
-        {
-            "name": "dasdasd",
-            "adapter": "VMware Network Adapter VMnet1",
-            "ip": "100.100.100.100",
-            "subnet": "255.255.255.0",
-            "gateway": "100.100.100.100"
         }
     ]
 }

@@ -1,26 +1,51 @@
-import sys
+"""
+Main gui for the IP-Changer
+version: 1.0.0 Initial commit by Roberts balulis
+"""
+
+__version__ = "1.0.0"
+
 import subprocess
-import customtkinter
 from tkinter import ttk
 import json
 from pathlib import Path
 import re
+import ctypes
+
+import customtkinter
+from CTkMessagebox import CTkMessagebox
 
 from create_log import setup_logger
-
-
-
-logger = setup_logger('main')
-
-customtkinter.set_appearance_mode("dark")
-customtkinter.set_default_color_theme("dark-blue")
 
 
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
-        self.geometry("1500x650")
+        self.logger = setup_logger(__name__)
+
+        customtkinter.set_appearance_mode("dark")
+        customtkinter.set_default_color_theme("dark-blue")
+
+        # Enable DPI awareness (checking scaling)
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except Exception:
+            pass
+
+        # Window size
+        width = 1500
+        height = 650
+
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        # Calculate position for centering
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
         self.title("IP Changer")
         self.resizable(False, False)
 
@@ -38,7 +63,7 @@ class App(customtkinter.CTk):
         header_button_width = 165
         header_button_font = customtkinter.CTkFont(size=16, weight="bold")
 
-        label_font = customtkinter.CTkFont(size=16, weight="bold")
+        self.label_font = customtkinter.CTkFont(size=16, weight="bold")
 
         self.header_frame = customtkinter.CTkFrame(master=self, height=50)
         self.header_frame.pack(side="top", fill="x", padx=10, pady=5)
@@ -59,14 +84,6 @@ class App(customtkinter.CTk):
                                                  font=header_button_font)
         button_delete.pack(side="left", padx=10, pady=5)
 
-        button_change_profile = customtkinter.CTkButton(master=self.header_frame,
-                                                 command=print("S"),
-                                                 text="Edit selected profile",
-                                                 width=header_button_width,
-                                                 height=header_button_height,
-                                                 font=header_button_font)
-        button_change_profile.pack(side="left", padx=10, pady=5)
-
         button_apply_profile = customtkinter.CTkButton(master=self.header_frame,
                                                  command=print("S"),
                                                  text="Apply selected profile",
@@ -75,12 +92,20 @@ class App(customtkinter.CTk):
                                                  font=header_button_font)
         button_apply_profile.pack(side="left", padx=10, pady=5)
 
+        button_about = customtkinter.CTkButton(master=self.header_frame,
+                                         command=print("S"),
+                                         text="About",
+                                         width=header_button_width,
+                                         height=header_button_height,
+                                         font=header_button_font)
+        button_about.pack(side="right", padx=10, pady=5)
+
         # Left frame
         self.left_frame = customtkinter.CTkFrame(master=self, width=290, height=350)
         self.left_frame.pack(side="left", fill="both", expand=True, padx=5, pady=5)
 
         left_label = customtkinter.CTkLabel(master=self.left_frame, text="Profiles",
-                                            font=label_font)
+                                            font=self.label_font)
         left_label.pack(pady=10)
 
         style = ttk.Style()
@@ -107,17 +132,20 @@ class App(customtkinter.CTk):
         style.map("Treeview.Heading",
                   background=[("active", "#2f2f2f")])
 
-        self.tree = ttk.Treeview(self.left_frame, columns=("Profile", "Adapter", "IP", "Subnet", "Gateway"), show="headings")
+        self.tree = ttk.Treeview(self.left_frame, columns=("Profile", "Adapter", "IP", "Subnet", "Gateway"), show="headings", selectmode="browse")
+        self.tree.bind("<Double-1>", self.OnDoubleClick)
 
         columns = [("Profile", 180), ("Adapter", 180), ("IP", 130), ("Subnet", 130), ("Gateway", 130)]
         for col, width in columns:
             self.tree.heading(col, text=col, anchor="center")
             self.tree.column(col, width=width, anchor="center")
 
+        #TODO Make this nicer
         #tree_scroll = ttk.Scrollbar(self.left_frame, orient="vertical", command=self.tree.yview)
         #self.tree.configure(yscrollcommand=tree_scroll.set)
 
         #tree_scroll.pack(side="right", fill="y")
+
         self.tree.pack(expand=True, fill="both", padx=5, pady=5)
 
         self.network_data = self.load_data()
@@ -139,14 +167,21 @@ class App(customtkinter.CTk):
 
         self.adapter_list.pack(pady=10)
 
-        self.ip_label = customtkinter.CTkLabel(self.right_frame, text="", font=label_font)
+        self.ip_label = customtkinter.CTkLabel(self.right_frame, text="", font=self.label_font)
         self.ip_label.pack(pady=10)
 
-        self.subnet_label = customtkinter.CTkLabel(self.right_frame, text="", font=label_font)
+        self.subnet_label = customtkinter.CTkLabel(self.right_frame, text="", font=self.label_font)
         self.subnet_label.pack(pady=10)
 
-        self.gateway_label = customtkinter.CTkLabel(self.right_frame, text="", font=label_font)
+        self.gateway_label = customtkinter.CTkLabel(self.right_frame, text="", font=self.label_font)
         self.gateway_label.pack(pady=10)
+
+
+    def OnDoubleClick(self, event):
+        selected_item = self.tree.selection()
+        if selected_item:
+            item_values = self.tree.item(selected_item[0], "values")
+            print(item_values)
 
 
     def update_adapter_info(self, adapter):
@@ -197,7 +232,14 @@ class App(customtkinter.CTk):
 
     def delete_profile(self):
         """Deletes the selected profile from the JSON file and updates the tree view."""
-        selected_item = self.tree.selection()  # Get selected row
+        msg = CTkMessagebox(title="Delete?", message="Are you sure you want to delete the profile?",
+                        icon="question", option_1="No", option_2="Yes", font=self.label_font)
+        response = msg.get()
+
+        if response=="No":
+            return
+
+        selected_item = self.tree.selection()
         if not selected_item:
             print("No profile selected.")
             return

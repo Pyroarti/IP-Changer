@@ -7,6 +7,7 @@ __version__ = "1.0.0"
 from tkinter import ttk
 import ipaddress
 import subprocess
+import ctypes
 
 import customtkinter
 
@@ -23,9 +24,28 @@ class NetworkProfile(customtkinter.CTkToplevel):
         self.app_instance = app_instance
         self.logger = setup_logger(__name__)
 
+        # Enable DPI awareness (checking scaling)
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except Exception:
+            pass
+
+        # Window size
+        width = 400
+        height = 600
+
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        # Calculate position for centering
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
         self.title("Profile")
         self.resizable(False, False)
-        self.geometry("400x600")
+
 
         self.network_adapters = self.get_network_adapters()
         self.configure_ui()
@@ -45,7 +65,7 @@ class NetworkProfile(customtkinter.CTkToplevel):
                                                         width=entry_width,
                                                         font=label_font)
         self.adapter_combobox.pack(pady=10)
-        self.adapter_combobox.set(self.network_adapters[0])  # Default selection
+        self.adapter_combobox.set(self.network_adapters[0])
 
         # Profile Name
         self.name_label = customtkinter.CTkLabel(self, text="Profile Name", font=label_font)
@@ -59,14 +79,14 @@ class NetworkProfile(customtkinter.CTkToplevel):
         # IP Address
         self.ip_label = customtkinter.CTkLabel(self, text="IP Address", font=label_font)
         self.ip_label.pack()
-        self.ip_entry = customtkinter.CTkEntry(self, placeholder_text="e.g. 192.168.1.10",
+        self.ip_entry = customtkinter.CTkEntry(self, placeholder_text="e.g. 192.168.1.10 or dhcp",
                                                height=entry_height,
                                                 width=entry_width,
                                                 font=label_font)
         self.ip_entry.pack(pady=10)
         self.ip_entry.bind("<FocusOut>", self.validate_ip)
 
-        # Subnet Mask (Dropdown)
+        # Subnet Mask
         self.subnet_label = customtkinter.CTkLabel(self, text="Subnet Mask", font=label_font)
         self.subnet_label.pack()
         self.subnet_values = ["255.255.255.0", "255.255.0.0", "255.0.0.0", "Custom"]
@@ -75,14 +95,14 @@ class NetworkProfile(customtkinter.CTkToplevel):
                                                         width=entry_width,
                                                         font=label_font)
         self.subnet_combobox.pack(pady=10)
-        self.subnet_combobox.set(self.subnet_values[0])  # Default selection
+        self.subnet_combobox.set(self.subnet_values[0])
 
         self.subnet_entry = customtkinter.CTkEntry(self, placeholder_text="Enter custom subnet",
                                                    height=entry_height,
                                                     width=entry_width,
                                                     font=label_font)
         self.subnet_entry.pack(pady=10)
-        self.subnet_entry.pack_forget()  # Hide initially
+        self.subnet_entry.pack_forget()
 
         # Gateway
         self.gateway_label = customtkinter.CTkLabel(self, text="Gateway", font=label_font)
