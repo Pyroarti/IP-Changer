@@ -53,15 +53,16 @@ class App(customtkinter.CTk):
         self.network_adapters = self.get_network_adapters()
 
         self.profile_toplevel = None
+        self.about_toplevel = None
 
         self.setup_UI()
 
     def setup_UI(self):
 
         # Header
-        header_button_height = 35
-        header_button_width = 165
-        header_button_font = customtkinter.CTkFont(size=16, weight="bold")
+        self.button_height = 35
+        self.button_width = 165
+        self.button_font = customtkinter.CTkFont(size=16, weight="bold")
 
         self.label_font = customtkinter.CTkFont(size=16, weight="bold")
 
@@ -71,33 +72,33 @@ class App(customtkinter.CTk):
         button_new_profile = customtkinter.CTkButton(master=self.header_frame,
                                                  command=self.open_profile_toplevel,
                                                  text="New profile",
-                                                 width=header_button_width,
-                                                 height=header_button_height,
-                                                 font=header_button_font)
+                                                 width=self.button_width,
+                                                 height=self.button_height,
+                                                 font=self.button_font)
         button_new_profile.pack(side="left", padx=10, pady=5)
 
         button_delete = customtkinter.CTkButton(master=self.header_frame,
                                                  command=self.delete_profile,
                                                  text="Delete selected profile",
-                                                 width=header_button_width,
-                                                 height=header_button_height,
-                                                 font=header_button_font)
+                                                 width=self.button_width,
+                                                 height=self.button_height,
+                                                 font=self.button_font)
         button_delete.pack(side="left", padx=10, pady=5)
 
         button_apply_profile = customtkinter.CTkButton(master=self.header_frame,
                                                  command=print("S"),
                                                  text="Apply selected profile",
-                                                 width=header_button_width,
-                                                 height=header_button_height,
-                                                 font=header_button_font)
+                                                 width=self.button_width,
+                                                 height=self.button_height,
+                                                 font=self.button_font)
         button_apply_profile.pack(side="left", padx=10, pady=5)
 
         button_about = customtkinter.CTkButton(master=self.header_frame,
-                                         command=print("S"),
+                                         command=self.open_about_toplevel,
                                          text="About",
-                                         width=header_button_width,
-                                         height=header_button_height,
-                                         font=header_button_font)
+                                         width=self.button_width,
+                                         height=self.button_height,
+                                         font=self.button_font)
         button_about.pack(side="right", padx=10, pady=5)
 
         # Left frame
@@ -155,44 +156,62 @@ class App(customtkinter.CTk):
         self.right_frame = customtkinter.CTkFrame(master=self, width=290, height=350)
         self.right_frame.pack(side="right", fill="both", expand=True, padx=5, pady=5)
 
-        right_label = customtkinter.CTkLabel(master=self.right_frame, text="Current status",
+        self.scrollable_right_frame = customtkinter.CTkScrollableFrame(master=self.right_frame, width=290, height=320)
+        self.scrollable_right_frame.pack(fill="both", expand=True, padx=5, pady=5)
+
+        right_label = customtkinter.CTkLabel(master=self.scrollable_right_frame, text="Current Network Status",
                                              font=customtkinter.CTkFont(size=16, weight="bold"))
         right_label.pack(pady=10)
 
-        self.adapter_list = customtkinter.CTkComboBox(master=self.right_frame,
-                                          values=self.network_adapters,
-                                          width=250,
-                                          height=35,
-                                          command=self.update_adapter_info)
+        self.adapter_labels = {}
 
-        self.adapter_list.pack(pady=10)
+        self.update_button = customtkinter.CTkButton(master=self.right_frame, text="Refresh list", command=self.refresh_adapters,
+                                                     width=self.button_width,
+                                                    height=self.button_height,
+                                                    font=self.button_font)
+        self.update_button.pack(pady=10)
 
-        self.ip_label = customtkinter.CTkLabel(self.right_frame, text="", font=self.label_font)
-        self.ip_label.pack(pady=10)
+        self.refresh_adapters()
 
-        self.subnet_label = customtkinter.CTkLabel(self.right_frame, text="", font=self.label_font)
-        self.subnet_label.pack(pady=10)
 
-        self.gateway_label = customtkinter.CTkLabel(self.right_frame, text="", font=self.label_font)
-        self.gateway_label.pack(pady=10)
+    def refresh_adapters(self):
+        """Fetch the latest adapter info and update the UI."""
+        self.adapter_labels.clear()
+
+        for widget in self.scrollable_right_frame.winfo_children():
+            widget.destroy()
+
+        right_label = customtkinter.CTkLabel(master=self.scrollable_right_frame, text="Current Network Status",
+                                             font=customtkinter.CTkFont(size=16, weight="bold"))
+        right_label.pack(pady=10)
+
+        adapters = self.get_network_adapters()
+        for adapter in adapters:
+            ip, subnet, gateway = self.get_network_info(adapter)
+
+            adapter_title = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"{adapter}", font=self.label_font)
+            adapter_title.pack(pady=5)
+
+            ip_label = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"IP: {ip}", font=self.label_font)
+            ip_label.pack()
+
+            subnet_label = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"Subnet: {subnet}", font=self.label_font)
+            subnet_label.pack()
+
+            gateway_label = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"Gateway: {gateway}", font=self.label_font)
+            gateway_label.pack(pady=5)
+
+            separator = customtkinter.CTkLabel(self.scrollable_right_frame, text="----------------------------", font=self.label_font)
+            separator.pack(pady=5)
+
+            self.adapter_labels[adapter] = (ip_label, subnet_label, gateway_label)
 
 
     def OnDoubleClick(self, event):
         selected_item = self.tree.selection()
         if selected_item:
-            item_values = self.tree.item(selected_item[0], "values")
-            print(item_values)
-
-
-    def update_adapter_info(self, adapter):
-        """Update the labels with current network details of the selected adapter."""
-        ip, subnet, gateway = self.get_network_info(adapter)
-
-        # Update labels
-        self.ip_label.configure(text=f"IP Address: {ip}")
-        self.subnet_label.configure(text=f"Subnet Mask: {subnet}")
-        self.gateway_label.configure(text=f"Gateway: {gateway}")
-
+            data = self.tree.item(selected_item[0], "values")
+            self.open_profile_toplevel(data)
 
 
     def load_data(self):
@@ -249,15 +268,13 @@ class App(customtkinter.CTk):
             print("Failed to get profile values.")
             return
 
-        profile_name = profile_values[0]  # The first column contains the profile name
+        profile_name = profile_values[0]
 
-        # Remove the profile from network_data
+
         self.network_data["profiles"] = [p for p in self.network_data["profiles"] if p["name"] != profile_name]
 
-        # Save the updated data
         self.save_data(self.network_data)
 
-        # Refresh the tree view
         self.populate_tree()
 
 
@@ -274,22 +291,38 @@ class App(customtkinter.CTk):
 
         self.network_data["profiles"].append(new_profile)
         self.save_data(self.network_data)
-        # Refresh the tree view
+
         self.populate_tree()
 
-    def open_profile_toplevel(self):
+
+    def open_profile_toplevel(self, data=None):
         """Opens a popup to maake a new profile or edit one"""
 
-        from profile_toplevel import NetworkProfile
+        from profile_toplevel import NetworkProfileToplevel
 
         if not hasattr(self, 'profile_toplevel') or self.profile_toplevel is None or not self.profile_toplevel.winfo_exists():
-            self.profile_toplevel = NetworkProfile(self)
+            self.profile_toplevel = NetworkProfileToplevel(self, data)
             self.profile_toplevel.focus()
             self.profile_toplevel.attributes('-topmost', True)
 
         if hasattr(self, 'profile_toplevel') and self.profile_toplevel.winfo_exists():
             self.profile_toplevel.focus()
             self.profile_toplevel.lift()
+
+
+    def open_about_toplevel(self):
+        """Opens a popup to maake a new profile or edit one"""
+
+        from about_toplevel import AboutToplevel
+
+        if not hasattr(self, 'about_toplevel') or self.about_toplevel is None or not self.about_toplevel.winfo_exists():
+            self.about_toplevel = AboutToplevel(self)
+            self.about_toplevel.focus()
+            self.about_toplevel.attributes('-topmost', True)
+
+        if hasattr(self, 'about_toplevel') and self.about_toplevel.winfo_exists():
+            self.about_toplevel.focus()
+            self.about_toplevel.lift()
 
 
     def populate_tree(self):
@@ -308,11 +341,18 @@ class App(customtkinter.CTk):
 
     def get_network_adapters(self):
         try:
-            result = subprocess.run(["wmic", "nic", "get", "NetConnectionID"], capture_output=True, text=True)
-            adapters = [line.strip() for line in result.stdout.split("\n") if line.strip() and "NetConnectionID" not in line]
+            result = subprocess.run(
+            [r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe", "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"],
+            capture_output=True,
+            text=True
+            )
+
+            adapters = [line.strip() for line in result.stdout.split("\n") if line.strip()]
+
             return adapters if adapters else ["Ethernet"]
+
         except Exception as e:
-            print(self, "Error", f"Failed to get network adapters: {e}")
+            print(self, "Error:", f"Failed to get network adapters: {e}")
             return ["Ethernet"]
 
 
