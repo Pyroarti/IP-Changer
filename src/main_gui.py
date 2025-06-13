@@ -47,9 +47,9 @@ class App(customtkinter.CTk):
         self.geometry(f"{width}x{height}+{x}+{y}")
 
         self.title("IP Changer")
-        self.resizable(False, False)
+        self.resizable(False, True)
 
-        self.json_path = Path("Data/profiles.json")
+        self.json_path = Path("data/profiles.json")
         self.network_adapters = self.get_network_adapters()
 
         self.profile_toplevel = None
@@ -86,7 +86,7 @@ class App(customtkinter.CTk):
         button_delete.pack(side="left", padx=10, pady=5)
 
         button_apply_profile = customtkinter.CTkButton(master=self.header_frame,
-                                                 command=print("S"),
+                                                 command=self.apply_selected_profile,
                                                  text="Apply selected profile",
                                                  width=self.button_width,
                                                  height=self.button_height,
@@ -190,19 +190,18 @@ class App(customtkinter.CTk):
             ip, subnet, gateway = self.get_network_info(adapter)
 
             adapter_title = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"{adapter}", font=self.label_font)
-            adapter_title.pack(pady=5)
+            adapter_title.pack(pady=1)
 
-            ip_label = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"IP: {ip}", font=self.label_font)
-            ip_label.pack()
+            ip_label = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"IP: {ip} / Subnet: {subnet}", font=self.label_font)
+            ip_label.pack(pady=1)
 
             subnet_label = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"Subnet: {subnet}", font=self.label_font)
-            subnet_label.pack()
 
             gateway_label = customtkinter.CTkLabel(self.scrollable_right_frame, text=f"Gateway: {gateway}", font=self.label_font)
-            gateway_label.pack(pady=5)
+            gateway_label.pack(pady=1)
 
-            separator = customtkinter.CTkLabel(self.scrollable_right_frame, text="----------------------------", font=self.label_font)
-            separator.pack(pady=5)
+            separator = customtkinter.CTkLabel(self.scrollable_right_frame, text="----------------------------", font=self.label_font, height=10)
+            separator.pack(pady=1)
 
             self.adapter_labels[adapter] = (ip_label, subnet_label, gateway_label)
 
@@ -217,7 +216,7 @@ class App(customtkinter.CTk):
     def load_data(self):
         """Loads network data from JSON file or creates default data if the file doesn't exist."""
         if not self.json_path.exists():
-            print(f"File not found: {self.json_path}, creating default data.")
+            self.logger.error(f"File not found: {self.json_path}, creating default data.")
             default_data = {
                 "profiles": [
                     {
@@ -236,7 +235,7 @@ class App(customtkinter.CTk):
             with self.json_path.open("r", encoding="utf-8") as file:
                 return json.load(file)
         except json.JSONDecodeError:
-            print("Error: JSON Decode Failed.")
+            self.logger.error("Error: JSON Decode Failed.")
             return {"profiles": []}
 
 
@@ -246,7 +245,7 @@ class App(customtkinter.CTk):
             with self.json_path.open("w", encoding="utf-8") as file:
                 json.dump(data, file, indent=4)
         except Exception as e:
-            print(f"Error saving data: {e}")
+            self.logger.error(f"Error saving data: {e}")
 
 
     def delete_profile(self):
@@ -260,12 +259,12 @@ class App(customtkinter.CTk):
 
         selected_item = self.tree.selection()
         if not selected_item:
-            print("No profile selected.")
+            self.logger.error("No profile selected.")
             return
 
         profile_values = self.tree.item(selected_item, "values")
         if not profile_values:
-            print("Failed to get profile values.")
+            self.logger.error("Failed to get profile values.")
             return
 
         profile_name = profile_values[0]
@@ -311,12 +310,16 @@ class App(customtkinter.CTk):
 
 
     def open_about_toplevel(self):
-        """Opens a popup to maake a new profile or edit one"""
+        """Opens a popup to make a new profile or edit one"""
 
         from about_toplevel import AboutToplevel
 
         if not hasattr(self, 'about_toplevel') or self.about_toplevel is None or not self.about_toplevel.winfo_exists():
             self.about_toplevel = AboutToplevel(self)
+
+            # Gör det till ett underfönster till huvudfönstret
+            self.about_toplevel.transient(self)
+
             self.about_toplevel.focus()
             self.about_toplevel.attributes('-topmost', True)
 
@@ -342,9 +345,10 @@ class App(customtkinter.CTk):
     def get_network_adapters(self):
         try:
             result = subprocess.run(
-            [r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe", "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"],
-            capture_output=True,
-            text=True
+                ["powershell", "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"],
+                capture_output=True,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
             )
 
             adapters = [line.strip() for line in result.stdout.split("\n") if line.strip()]
@@ -352,14 +356,20 @@ class App(customtkinter.CTk):
             return adapters if adapters else ["Ethernet"]
 
         except Exception as e:
-            print(self, "Error:", f"Failed to get network adapters: {e}")
+            self.logger.error(self, "Error:", f"Failed to get network adapters: {e}")
             return ["Ethernet"]
 
 
     def get_network_info(self, adapter):
         """Fetch IP Address, Subnet Mask, and Default Gateway for the given adapter"""
         try:
-            result = subprocess.run(["ipconfig"], capture_output=True, text=True)
+            result = subprocess.run(
+            ["ipconfig"],
+            capture_output=True,
+            text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW
+            )
+
             output = result.stdout
 
             # Use regex to find the relevant adapter section
@@ -384,35 +394,50 @@ class App(customtkinter.CTk):
             return ip, subnet, gateway
 
         except Exception as e:
-            print(f"Error retrieving network info: {e}")
+            self.logger.error(f"Error retrieving network info: {e}")
             return "N/A", "N/A", "N/A"
 
 
-    def apply_settings(self):
-        adapter = self.adapter_combo.currentText()
-        profile_name = self.profile_combo.currentText()
-        if profile_name == "DHCP":
+    def apply_selected_profile(self):
+        """Applies the selected network profile settings."""
+        selected_item = self.tree.selection()
+        if not selected_item:
+            self.logger.error("No profile selected.")
+            return
+
+        profile_values = self.tree.item(selected_item, "values")
+        if not profile_values:
+            self.logger.error("Failed to get profile values.")
+            return
+
+        profile_name, adapter, ip, subnet, gateway = profile_values
+
+        if ip.lower() == "dhcp":
             self.set_dhcp(adapter)
         else:
-            self.set_static_ip(adapter, self.profiles[profile_name])
-
+            self.set_static_ip(adapter, ip, subnet, gateway)
 
     def set_dhcp(self, adapter):
+        """Enables DHCP for the given adapter."""
         try:
-            subprocess.run(["netsh", "interface", "ip", "set", "address", f"name={adapter}", "source=dhcp"], check=True)
-            subprocess.run(["netsh", "interface", "ip", "set", "dns", f"name={adapter}", "source=dhcp"], check=True)
-            print(self, "Success", "DHCP enabled successfully.")
+            subprocess.run(["netsh", "interface", "ip", "set", "address", f"name={adapter}", "source=dhcp"], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.run(["netsh", "interface", "ip", "set", "dns", f"name={adapter}", "source=dhcp"], check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            self.logger.error("Success: DHCP enabled successfully.")
         except subprocess.CalledProcessError as e:
-            print(self, "Error", f"Failed to enable DHCP: {e}")
+            self.logger.error(f"Error: Failed to enable DHCP: {e}")
 
-
-    def set_static_ip(self, adapter, profile):
+    def set_static_ip(self, adapter, ip, subnet, gateway):
+        """Sets a static IP address for the given adapter."""
         try:
-            subprocess.run(["netsh", "interface", "ip", "set", "address", f"name={adapter}", "static",
-                            profile["ip"], profile["subnet"], profile["gateway"]], check=True)
-            print(self, "Success", "Static IP applied successfully.")
+            subprocess.run(
+                ["netsh", "interface", "ip", "set", "address", f"name={adapter}", "static", ip, subnet, gateway],
+                check=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+                )
+
+            self.logger.error(f"Success: Static IP {ip} applied to {adapter}.")
         except subprocess.CalledProcessError as e:
-            print(self, "Error", f"Failed to apply static IP: {e}")
+            self.logger.error(f"Error: Failed to apply static IP: {e}")
 
 
 if __name__ == "__main__":

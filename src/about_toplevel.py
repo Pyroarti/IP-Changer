@@ -7,6 +7,8 @@ __version__ = "1.0.0"
 import ctypes
 import tkinter as tk
 from pathlib import Path
+import sys
+import os
 
 import customtkinter
 from PIL import Image, ImageTk
@@ -15,7 +17,7 @@ from create_log import setup_logger
 from main_gui import App
 
 # Just for jokes
-TEXT = "This software is made and owned by Roberts Balulis. Any unauthorized copying will delete your system32. This was made in my free time and not on work. Here is proof"
+TEXT = "This software is made and owned by Roberts Balulis. Any unauthorized copying will delete your system32. This was made in my free time and not on work. Here is proof (i would never drink on work)"
 
 
 class AboutToplevel(customtkinter.CTkToplevel):
@@ -58,12 +60,25 @@ class AboutToplevel(customtkinter.CTkToplevel):
         self.about_text = customtkinter.CTkLabel(self, text=TEXT, font=label_font, wraplength=700)
         self.about_text.pack(pady=10)
 
-        image = Image.open("assets/About_pic.jpg")
-        rotated_image = image.rotate(90, expand=True)
+        # Hantera filväg beroende på om programmet körs som EXE eller script
+        if getattr(sys, 'frozen', False):  # Om programmet är en EXE
+            base_path = sys._MEIPASS
+        else:  # Om det körs som ett vanligt script
+            base_path = os.path.abspath(".")
 
-        self.bg_image = ImageTk.PhotoImage(rotated_image.resize((800, 400)))
+        image_path = os.path.join(base_path, "UI", "About_pic.jpg")
 
-        bg_image_label = customtkinter.CTkLabel(self, image=self.bg_image, text="")
-        bg_image_label.pack(pady=10)
+        try:
+            image = Image.open(image_path)
+            rotated_image = image.rotate(90, expand=True)
+            resized_image = rotated_image.resize((800, 400))
+            self.bg_image = ImageTk.PhotoImage(resized_image)
+
+            bg_image_label = customtkinter.CTkLabel(self, image=self.bg_image, text="")
+            bg_image_label.pack(pady=10)
+        except FileNotFoundError:
+            self.logger.error(f"Filen kunde inte hittas: {image_path}")
+        except Exception as e:
+            self.logger.error(f"Ett fel uppstod vid bildladdning: {e}")
 
 

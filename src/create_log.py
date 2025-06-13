@@ -1,8 +1,3 @@
-"""
-Function to make is easy to add logs and alarms to your code
-Made by Roberts balulis
-"""
-
 import logging
 import os
 import sys
@@ -35,20 +30,19 @@ def setup_logger(logger_name):
         app_path = sys._MEIPASS
     else:
         app_path = os.path.dirname(os.path.abspath(__file__))
-        parent_path = os.path.dirname(app_path)
+
+    # Move up one directory from src
+    parent_path = os.path.abspath(os.path.join(app_path, os.pardir))
 
     alarms = "alarms"
     log_folder = "logs"
 
-    if logger_name  != "alarms":
-
+    if logger_name != "alarms":
         log_dir = os.path.abspath(os.path.join(parent_path, log_folder))
-        os.makedirs(log_dir, exist_ok=True)
-        print(log_dir)
-
     else:
         log_dir = os.path.abspath(os.path.join(parent_path, alarms))
-        os.makedirs(log_dir, exist_ok=True)
+
+    os.makedirs(log_dir, exist_ok=True)
 
     log_file = os.path.join(log_dir, f"{logger_name}.log")
     formatter = logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(message)s', datefmt='%Y:%m:%d %H:%M:%S')

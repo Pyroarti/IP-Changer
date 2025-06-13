@@ -150,14 +150,15 @@ class NetworkProfileToplevel(customtkinter.CTkToplevel):
         """Fetch available network adapters from the system."""
         try:
             result = subprocess.run(
-            [r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe", "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"],
-            capture_output=True,
-            text=True
-        )
+                ["powershell", "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"],
+                capture_output=True,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
             adapters = [line.strip() for line in result.stdout.split("\n") if line.strip() and "NetConnectionID" not in line]
             return adapters if adapters else ["Ethernet"]
         except Exception as e:
-            print(f"Error: Failed to get network adapters: {e}")
+            self.logger.error(f"Error: Failed to get network adapters: {e}")
             return ["Ethernet"]
 
     def handle_subnet_change(self, choice):
@@ -167,22 +168,34 @@ class NetworkProfileToplevel(customtkinter.CTkToplevel):
         else:
             self.subnet_entry.pack_forget()
 
+
     def validate_ip(self, event=None):
-        """Validate IP address format with dark theme adjustments."""
-        ip = self.ip_entry.get()
+        """Validate IP address format, allowing 'dhcp' as a valid input."""
+        ip = self.ip_entry.get().strip().lower()
+
+        if ip == "dhcp":
+            self.ip_entry.configure(border_color="green", text_color="white")  # DHCP is valid
+            return True
+
         try:
             ipaddress.IPv4Address(ip)
-            self.ip_entry.configure(border_color="green", text_color="white")  # Valid input
+            self.ip_entry.configure(border_color="green", text_color="white")  # Valid static IP
             return True
         except ValueError:
             self.ip_entry.configure(border_color="red", text_color="red")  # Invalid input
             return False
 
+
     def validate_gateway(self, event=None):
-        """Validate Gateway IP format and ensure it's in the same subnet."""
-        ip = self.ip_entry.get()
-        gateway = self.gateway_entry.get()
+        """Validate Gateway IP format and ensure it's in the same subnet, unless using DHCP."""
+        ip = self.ip_entry.get().strip().lower()
+        gateway = self.gateway_entry.get().strip()
         subnet = self.subnet_combobox.get() if self.subnet_combobox.get() != "Custom" else self.subnet_entry.get()
+
+        # If DHCP is selected, skip validation and mark as valid
+        if ip == "dhcp":
+            self.gateway_entry.configure(border_color="green", text_color="white")
+            return True
 
         try:
             ip_obj = ipaddress.IPv4Address(ip)
@@ -200,13 +213,14 @@ class NetworkProfileToplevel(customtkinter.CTkToplevel):
             return False
 
 
+
     def validate_and_save(self):
         """Final validation before saving."""
         if self.validate_ip() and self.validate_gateway():
             self.validation_label.configure(text="Settings saved successfully!", text_color="green")
 
             name = self.name_entry.get()
-            print(name)
+            self.logger.error(name)
             if name == "":
                 return self.validation_label.configure(text="Invalid network settings!", text_color="red")
 
