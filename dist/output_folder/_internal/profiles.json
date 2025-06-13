@@ -1,0 +1,32 @@
+{
+    "profiles": [
+        {
+            "name": "Default",
+            "adapter": "Ethernet",
+            "ip": "0.0.0.0",
+            "subnet": "255.255.255.0",
+            "gateway": "0.0.0.1"
+        },
+        {
+            "name": "hej",
+            "adapter": "Ethernet 2",
+            "ip": "192.168.11.14",
+            "subnet": "255.255.255.0",
+            "gateway": "192.168.11.11"
+        },
+        {
+            "name": "test",
+            "adapter": "Ethernet 2",
+            "ip": "192.168.11.10",
+            "subnet": "255.255.0.0",
+            "gateway": "192.168.10.5"
+        },
+        {
+            "name": "dh",
+            "adapter": "Ethernet 2",
+            "ip": "dhcp",
+            "subnet": "255.255.255.0",
+            "gateway": ""
+        }
+    ]
+}

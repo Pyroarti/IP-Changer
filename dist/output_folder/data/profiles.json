@@ -1,0 +1,25 @@
+{
+    "profiles": [
+        {
+            "name": "Default",
+            "adapter": "Ethernet",
+            "ip": "0.0.0.0",
+            "subnet": "255.255.255.0",
+            "gateway": "0.0.0.1"
+        },
+        {
+            "name": "hej",
+            "adapter": "Ethernet 2",
+            "ip": "192.168.69.4",
+            "subnet": "255.255.255.0",
+            "gateway": "192.168.69.1"
+        },
+        {
+            "name": "hej2",
+            "adapter": "Ethernet 2",
+            "ip": "dhcp",
+            "subnet": "255.255.255.0",
+            "gateway": ""
+        }
+    ]
+}
