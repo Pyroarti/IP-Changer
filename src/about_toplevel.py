@@ -28,20 +28,18 @@ class AboutToplevel(customtkinter.CTkToplevel):
         self.app_instance = app_instance
         self.logger = setup_logger(__name__)
 
-        # Enable DPI awareness (checking scaling)
-        try:
+        # Kollar windows skalning
+        if hasattr(ctypes, "windll") and hasattr(ctypes.windll, "shcore"):
             ctypes.windll.shcore.SetProcessDpiAwareness(2)
-        except Exception:
-            pass
 
-        # Window size
+        # Window
         width = 800
         height = 450
 
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
 
-        # Calculate position for centering
+        # Centrerar window
         x = (screen_width // 2) - (width // 2)
         y = (screen_height // 2) - (height // 2)
 

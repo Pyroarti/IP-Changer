@@ -7,6 +7,7 @@ __version__ = "1.0.0"
 
 import subprocess
 from tkinter import ttk
+import tkinter as tk
 import json
 from pathlib import Path
 import re
@@ -22,25 +23,26 @@ class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
+        self.SHELL_PATH = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+
+
         self.logger = setup_logger(__name__)
 
         customtkinter.set_appearance_mode("dark")
         customtkinter.set_default_color_theme("dark-blue")
 
-        # Enable DPI awareness (checking scaling)
-        try:
+        # Kollar windows skalning
+        if hasattr(ctypes, "windll") and hasattr(ctypes.windll, "shcore"):
             ctypes.windll.shcore.SetProcessDpiAwareness(2)
-        except Exception:
-            pass
 
-        # Window size
+        # Window
         width = 1500
         height = 650
 
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
 
-        # Calculate position for centering
+        # Centrerar window
         x = (screen_width // 2) - (width // 2)
         y = (screen_height // 2) - (height // 2)
 
@@ -176,6 +178,9 @@ class App(customtkinter.CTk):
 
     def refresh_adapters(self):
         """Fetch the latest adapter info and update the UI."""
+
+        self.update_button.configure(text="Refreshing...")
+        self.update_button.update_idletasks()
         self.adapter_labels.clear()
 
         for widget in self.scrollable_right_frame.winfo_children():
@@ -204,6 +209,8 @@ class App(customtkinter.CTk):
             separator.pack(pady=1)
 
             self.adapter_labels[adapter] = (ip_label, subnet_label, gateway_label)
+        
+        self.update_button.configure(text="Refresh list")
 
 
     def OnDoubleClick(self, event):
@@ -345,7 +352,8 @@ class App(customtkinter.CTk):
     def get_network_adapters(self):
         try:
             result = subprocess.run(
-                ["powershell", "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"],
+                [self.SHELL_PATH, "-NoProfile", "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"]
+,
                 capture_output=True,
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW
@@ -356,7 +364,7 @@ class App(customtkinter.CTk):
             return adapters if adapters else ["Ethernet"]
 
         except Exception as e:
-            self.logger.error(self, "Error:", f"Failed to get network adapters: {e}")
+            self.logger.error(f"Failed to get network adapters: {e}")
             return ["Ethernet"]
 
 
@@ -441,5 +449,18 @@ class App(customtkinter.CTk):
 
 
 if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+    def is_admin():
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except:
+            return False
+
+    if not is_admin():
+        root = tk.Tk()
+        root.withdraw()  
+        CTkMessagebox(title="Permission Error", message="Programmet måste köras som administratör.", icon="cancel")
+        root.mainloop()
+    else:
+        app = App()
+        app.mainloop()
+

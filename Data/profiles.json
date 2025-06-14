@@ -27,6 +27,20 @@
             "ip": "dhcp",
             "subnet": "255.255.255.0",
             "gateway": ""
+        },
+        {
+            "name": "dh",
+            "adapter": "Ethernet",
+            "ip": "dhcp",
+            "subnet": "255.255.255.0",
+            "gateway": ""
+        },
+        {
+            "name": "Test11",
+            "adapter": "Ethernet 6",
+            "ip": "192.168.5.32",
+            "subnet": "255.255.255.0",
+            "gateway": "192.168.5.3"
         }
     ]
 }

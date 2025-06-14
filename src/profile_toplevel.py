@@ -21,15 +21,15 @@ class NetworkProfileToplevel(customtkinter.CTkToplevel):
     def __init__(self, app_instance:"App", network_data, *args, **kwargs):
         super().__init__( *args, **kwargs)
 
+        self.SHELL_PATH = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+
         self.app_instance = app_instance
         self.network_data = network_data
         self.logger = setup_logger(__name__)
 
-        # Enable DPI awareness (checking scaling)
-        try:
+        ## Enable DPI awareness (checking scaling)
+        if hasattr(ctypes, "windll") and hasattr(ctypes.windll, "shcore"):
             ctypes.windll.shcore.SetProcessDpiAwareness(2)
-        except Exception:
-            pass
 
         # Window size
         width = 400
@@ -150,7 +150,7 @@ class NetworkProfileToplevel(customtkinter.CTkToplevel):
         """Fetch available network adapters from the system."""
         try:
             result = subprocess.run(
-                ["powershell", "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"],
+                [self.SHELL_PATH, "-Command", "Get-NetAdapter | Select-Object -ExpandProperty Name"],
                 capture_output=True,
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW
